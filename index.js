@@ -7,6 +7,9 @@ var MongoStore = require('connect-mongo')(session);
 var bodyParser = require('body-parser');
 var cookieParser = require('cookie-parser');
 var mongoose = require('mongoose');
+//Passport for facebook login
+var passport = require('passport');
+var FacebookStrategy = require('passport-facebook').Strategy;
 // load .env
 require('dotenv').config();
 
@@ -26,9 +29,9 @@ app.use(session({
         maxAge: 1000 * 60 * 24 * 7
     },
     //Updates the session even if there were no updates
-    resave: false, 
+    resave: false,
     //Creates a new session for every user
-    saveUninitialized: true, 
+    saveUninitialized: true,
     // add session store
     store: new MongoStore({
         url: process.env.DB_URL
@@ -58,12 +61,45 @@ app.use(bodyParser.urlencoded({
 // connect to database
 mongoose.connect(process.env.DB_URL);
 
+
+// LOCAL AUTHORIZATION SETUP, SEE /lib/auth.js FOR FUNCTIONS
 var options = {};
 var auth = require('./lib/auth')(app, options);
 auth.init(); // setupmiddleware
 auth.registerRoutes();
 
-// home page
+// FACEBOOK AUTHORIZATION SETUP
+// Facbook Login Stratgey using passport-facebook
+passport.use(new FacebookStrategy({
+        clientID: process.env.FACEBOOK_APP_ID,
+        clientPassword: process.env.FACEBOOK_APP_SECRET,
+        callbackURL: 'http://localhost:8081/auth/facebook/callback'
+    },
+    function (accessToken, refreshToken, profile, cb) {
+        User.findOrCreate({
+            facebookId: profile.id
+        }, function (err, user) {
+            return cb(err, user);
+        });
+    }
+));
+// OAuth for Facebook.
+// Routes to and from Auth provider
+// redirect TO - FACEBOOK
+app.get('/auth/facebook', passport.authenticate('facebook'));
+
+// callback FROM - FACEBOOK
+app.get('/auth/facebook/callback', passport.authenticate('facebook', {
+        failureRedirect: '/login'
+    }),
+    function (req, res) {
+        res.redirect('/');
+    });
+// END OF FACEBOOK AUTHORIZATION
+
+
+
+// BEGIN HOME PAGE, COOKIES
 app.get('/', function (req, res) {
     if (req.session.treat) {
         return res.render('view', {
@@ -107,6 +143,7 @@ app.get('/clear', function (req, res) {
     //delete req.cookies.treat;
     res.redirect('/');
 });
+
 
 
 // start server

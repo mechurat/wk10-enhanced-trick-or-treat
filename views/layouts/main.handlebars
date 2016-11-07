@@ -26,6 +26,14 @@
                     <span class="item">{{user.username}}</span>
                     <a href="/logout" class="item">Logout</a>
                 {{else}}
+                    <form id="login">
+<!--
+                        <input type="text" name="username" placeholder="Username">
+                        <input type="password" name="password" placeholder="Password">
+                        <input type="submit" value="Login" class="item">
+-->
+                    </form>
+                    <a href="/auth/facebook" class="item">Login with Facebook</a>
                     <a href="/login" class="item">Login</a>
                     <a href="/signup" class="item">Sign Up</a>
                 {{/if}}
